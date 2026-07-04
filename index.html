@@ -1,0 +1,680 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Study Tracker</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,400;9..144,500;9..144,600&family=Inter:wght@400;500;600;700&family=Archivo+Black&display=swap');
+
+  :root{
+    --ink: #14161C;
+    --panel: #1B1E26;
+    --panel-raised: #21242E;
+    --line: rgba(255,255,255,0.08);
+    --ivory: #EDE9DE;
+    --muted: #9B978A;
+    --brass: #C9A227;
+    --brass-soft: rgba(201,162,39,0.14);
+    --teal: #4FA3A0;
+    --teal-soft: rgba(79,163,160,0.14);
+    --wine: #B5546B;
+    --wine-soft: rgba(181,84,107,0.14);
+    --danger: #C0604A;
+    --radius: 14px;
+  }
+  *{ box-sizing:border-box; }
+  html,body{ margin:0; padding:0; }
+  body{
+    background: var(--ink); color: var(--ivory);
+    font-family: 'Inter', sans-serif; min-height: 100vh;
+  }
+  @media (prefers-reduced-motion: reduce){ *{ transition:none !important; animation:none !important; } }
+
+  #app{ display:flex; min-height:100vh; }
+
+  /* Sidebar */
+  .sidebar{
+    width: 230px; flex-shrink:0; background: var(--panel);
+    border-right: 1px solid var(--line); padding: 26px 18px;
+    display:flex; flex-direction:column;
+  }
+  .eyebrow{ font-size:10.5px; letter-spacing:0.14em; text-transform:uppercase; color:var(--brass); font-weight:600; margin-bottom:6px; }
+  .app-title{ font-family:'Fraunces',serif; font-size:21px; font-weight:500; line-height:1.2; margin-bottom:4px; }
+  .app-date{ font-size:12px; color:var(--muted); margin-bottom:20px; }
+
+  .exam-chip{
+    background: var(--panel-raised); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; margin-bottom:22px; cursor:pointer;
+  }
+  .exam-chip:hover{ border-color: var(--brass); }
+  .exam-chip .num{ font-family:'Fraunces',serif; font-size:22px; color:var(--brass); font-weight:600; line-height:1; }
+  .exam-chip .lbl{ font-size:11px; color:var(--muted); margin-top:4px; }
+  .exam-chip input[type="date"]{
+    background:transparent; border:none; color:var(--ivory); font-family:'Inter';
+    font-size:12px; width:100%; margin-top:6px;
+  }
+
+  nav{ display:flex; flex-direction:column; gap:3px; flex:1; }
+  .nav-item{
+    display:flex; align-items:center; gap:10px; padding:10px 12px; border-radius:9px;
+    color:var(--muted); cursor:pointer; font-size:14px; font-weight:500; border:none; background:none;
+    text-align:left; width:100%; font-family:'Inter';
+  }
+  .nav-item .ico{ font-size:15px; width:18px; text-align:center; }
+  .nav-item:hover{ background: var(--panel-raised); color:var(--ivory); }
+  .nav-item.active{ background: var(--brass-soft); color: var(--brass); }
+
+  .save-indicator{ font-size:11.5px; color:var(--muted); display:flex; align-items:center; gap:6px; margin-top:16px; }
+  .save-dot{ width:6px; height:6px; border-radius:50%; background:#7FBF8E; }
+  .reset-link{ color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; font-size:11.5px; font-family:'Inter'; margin-top:10px; padding:0; text-align:left; }
+  .reset-link:hover{ color:var(--danger); }
+
+  /* Main */
+  main{ flex:1; padding: 30px 40px 60px; max-width: 980px; }
+  .page-title{ font-family:'Fraunces',serif; font-size:30px; font-weight:500; margin:0 0 4px; }
+  .page-date{ font-size:13px; color:var(--muted); margin-bottom:26px; }
+
+  .stats{ display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:30px; }
+  @media (max-width:900px){ .stats{ grid-template-columns:repeat(2,1fr); } main{ padding:24px 20px 50px; } #app{ flex-direction:column; } .sidebar{ width:100%; } }
+
+  .card{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:16px 18px; }
+  .card .card-label{ font-size:10.5px; letter-spacing:0.1em; text-transform:uppercase; color:var(--muted); font-weight:600; margin-bottom:8px; }
+  .card .card-value{ font-family:'Fraunces',serif; font-size:24px; font-weight:500; }
+  .card .card-sub{ font-size:11.5px; color:var(--muted); margin-top:4px; }
+  .card.accent-brass .card-value{ color: var(--brass); }
+  .card.accent-wine .card-value{ color: var(--wine); }
+  .card.accent-teal .card-value{ color: var(--teal); }
+
+  h2.section-heading{
+    font-size:11px; letter-spacing:0.12em; text-transform:uppercase; color:var(--muted);
+    font-weight:600; margin: 0 0 14px; border-bottom:1px solid var(--line); padding-bottom:10px;
+  }
+
+  /* Lecture list (Today) */
+  .lecture-card{
+    display:flex; align-items:center; gap:14px; background:var(--panel); border:1px solid var(--line);
+    border-radius:12px; padding:14px 16px; margin-bottom:10px;
+  }
+  .lecture-card .l-name{ flex:1; font-size:14.5px; font-weight:500; }
+  .lecture-card.status-done{ border-color: rgba(127,191,142,0.4); }
+  .lecture-card.status-skipped .l-name{ color:var(--muted); text-decoration:line-through; }
+  .pill{ font-size:12px; font-weight:600; padding:6px 14px; border-radius:20px; border:1px solid var(--line); cursor:pointer; background:var(--panel-raised); color:var(--muted); }
+  .pill.pending{ color:var(--brass); border-color: rgba(201,162,39,0.4); }
+  .pill.done{ background: rgba(127,191,142,0.15); color:#7FBF8E; border-color: rgba(127,191,142,0.4); }
+  .skip-link{ font-size:12px; color:var(--muted); text-decoration:underline; cursor:pointer; background:none; border:none; font-family:'Inter'; }
+  .skip-link.active{ color: var(--wine); }
+  .rest-day{ text-align:center; padding:50px 20px; color:var(--muted); font-family:'Fraunces',serif; font-size:18px; background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); }
+
+  /* Weekly table */
+  .week-table{ display:flex; flex-direction:column; gap:8px; }
+  .week-row{ display:grid; grid-template-columns: 90px 1fr 90px; align-items:center; gap:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:12px 16px; }
+  .week-row.is-today{ border-color: var(--brass); }
+  .day-badge{ text-align:center; }
+  .day-badge .dow{ font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:var(--muted); }
+  .day-badge .dom{ font-family:'Fraunces',serif; font-size:20px; font-weight:600; }
+  .lec-pills{ display:flex; flex-wrap:wrap; gap:6px; }
+  .mini-pill{ font-size:11px; padding:4px 10px; border-radius:14px; border:1px solid var(--line); background:var(--panel-raised); color:var(--muted); cursor:pointer; }
+  .mini-pill.done{ background: rgba(127,191,142,0.15); color:#7FBF8E; border-color: rgba(127,191,142,0.35); }
+  .mini-pill.skipped{ background: var(--wine-soft); color:var(--wine); border-color: rgba(181,84,107,0.35); text-decoration:line-through; }
+  .week-progress{ text-align:right; font-size:13px; color:var(--muted); font-family:'Fraunces',serif; }
+  .rest-label{ font-size:12.5px; color:var(--muted); font-style:italic; }
+
+  /* Backlog */
+  .backlog-hero{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:30px; text-align:center; margin-bottom:22px; }
+  .backlog-hero .big{ font-family:'Fraunces',serif; font-size:56px; color:var(--brass); font-weight:600; line-height:1; }
+  .backlog-hero .cap{ font-size:12.5px; color:var(--muted); margin-top:8px; text-transform:uppercase; letter-spacing:0.1em; }
+  .backlog-controls{ display:flex; gap:12px; justify-content:center; margin-top:20px; }
+  .backlog-controls button{ width:42px; height:42px; border-radius:10px; border:1px solid var(--line); background:var(--panel-raised); color:var(--ivory); font-size:20px; cursor:pointer; }
+  .backlog-controls button:hover{ border-color:var(--brass); color:var(--brass); }
+  .backlog-set{ display:flex; align-items:center; justify-content:center; gap:8px; margin-top:16px; font-size:12.5px; color:var(--muted); }
+  .backlog-set input{ width:70px; background:var(--panel-raised); border:1px solid var(--line); color:var(--ivory); border-radius:8px; padding:6px 10px; font-family:'Inter'; font-size:14px; text-align:center; }
+  .note-box{ font-size:13px; color:var(--muted); background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; line-height:1.5; }
+
+  /* Tests */
+  .test-item{ display:flex; align-items:center; gap:14px; background:var(--panel); border:1px solid var(--line); border-radius:12px; padding:14px 16px; margin-bottom:10px; }
+  .test-item input[type="checkbox"]{ width:18px; height:18px; accent-color:var(--wine); cursor:pointer; }
+  .test-item .t-info{ flex:1; }
+  .test-item .t-name{ font-size:14.5px; font-weight:500; }
+  .test-item.done .t-name{ text-decoration:line-through; color:var(--muted); }
+  .t-status{ font-size:11.5px; margin-top:2px; }
+  .t-status.pending{ color:var(--wine); }
+  .t-status.done{ color:#7FBF8E; }
+  .test-item .t-remove{ background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; }
+  .test-item .t-remove:hover{ color:var(--danger); }
+  .add-row{ display:flex; gap:8px; margin: 16px 0 30px; }
+  .add-row input{ flex:1; background:var(--panel-raised); border:1px solid var(--line); color:var(--ivory); border-radius:8px; padding:11px 14px; font-family:'Inter'; font-size:13.5px; }
+  .add-row button{ background: var(--wine); border:none; color:#14161C; font-weight:600; padding:0 18px; border-radius:8px; cursor:pointer; font-size:13.5px; }
+  .test-stats{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; }
+
+  /* Chapters */
+  .subject-tabs{ display:flex; gap:8px; margin-bottom:18px; }
+  .subject-tab{ flex:1; padding:12px 14px; border-radius:var(--radius); border:1px solid var(--line); background:var(--panel); cursor:pointer; text-align:left; color:var(--muted); font-family:'Inter'; }
+  .subject-tab .s-name{ font-weight:600; font-size:14px; color:var(--ivory); }
+  .subject-tab .s-progress{ font-size:12px; margin-top:4px; }
+  .subject-tab.active{ border-color: var(--accent); background: var(--accent-soft); }
+  .subject-tab.active .s-name{ color: var(--accent); }
+  .subject-tab[data-subject="maths"].active{ --accent: var(--brass); --accent-soft: var(--brass-soft); }
+  .subject-tab[data-subject="physics"].active{ --accent: var(--teal); --accent-soft: var(--teal-soft); }
+  .subject-tab[data-subject="chemistry"].active{ --accent: var(--wine); --accent-soft: var(--wine-soft); }
+  .chapter-panel{ background:var(--panel); border:1px solid var(--line); border-radius:var(--radius); padding:10px 8px; }
+  .chapter-list{ list-style:none; margin:0; padding:0; }
+  .chapter-item{ display:flex; align-items:center; gap:12px; padding:11px 12px; border-radius:10px; }
+  .chapter-item:hover{ background:var(--panel-raised); }
+  .chapter-item input[type="checkbox"]{ width:18px; height:18px; accent-color:var(--current-accent, var(--brass)); cursor:pointer; flex-shrink:0; }
+  .chapter-item .c-name{ flex:1; font-size:14.5px; }
+  .chapter-item.done .c-name{ color:var(--muted); text-decoration:line-through; }
+  .chapter-item .c-remove{ background:none; border:none; color:var(--muted); cursor:pointer; font-size:16px; padding:2px 6px; opacity:0; border-radius:6px; }
+  .chapter-item:hover .c-remove{ opacity:1; }
+  .chapter-item .c-remove:hover{ color:var(--danger); }
+  .add-chapter{ display:flex; gap:8px; padding:10px 12px 6px; }
+  .add-chapter input{ flex:1; background:var(--panel-raised); border:1px solid var(--line); color:var(--ivory); border-radius:8px; padding:9px 12px; font-family:'Inter'; font-size:13.5px; }
+  .add-chapter button{ background: var(--current-accent, var(--brass)); border:none; color:#14161C; font-weight:600; padding:0 16px; border-radius:8px; cursor:pointer; font-size:13.5px; }
+  .progress-track{ height:6px; border-radius:4px; background:rgba(255,255,255,0.08); overflow:hidden; margin-top:8px; }
+  .progress-fill{ height:100%; border-radius:4px; background:var(--brass); }
+
+  input:focus-visible, button:focus-visible{ outline:2px solid var(--brass); outline-offset:1px; }
+  .loading{ text-align:center; padding:80px 0; color:var(--muted); font-family:'Fraunces',serif; font-size:18px; width:100%; }
+  .target-inline{ display:flex; align-items:center; gap:6px; font-size:12px; color:var(--muted); margin-top:8px; }
+  .target-inline input{ width:44px; background:var(--panel-raised); border:1px solid var(--line); color:var(--ivory); border-radius:6px; padding:3px 6px; font-family:'Inter'; font-size:13px; }
+  .mk-signature{
+    display: flex;
+    justify-content: flex-end;
+    margin-top: 34px;
+    user-select: none;
+    pointer-events: none;
+  }
+  .mk-signature .mk-mark{
+    font-family: 'Archivo Black', sans-serif;
+    font-size: 30px;
+    line-height: 0.8;
+    color: var(--brass);
+    opacity: 0.85;
+    display: inline-flex;
+    transform: skewX(-6deg);
+  }
+  .mk-signature .mk-mark span:last-child{
+    margin-left: -0.32em;
+  }
+</style>
+</head>
+<body>
+<div id="app"><div class="loading">Loading your tracker…</div></div>
+
+<script>
+const SUBJECTS = [
+  { key:'maths', label:'Maths', accent:'var(--brass)', defaults:[
+    'Sets & Relations','Functions','Trigonometric Functions','Complex Numbers','Quadratic Equations',
+    'Permutations & Combinations','Binomial Theorem','Sequences & Series','Straight Lines','Conic Sections',
+    'Limits & Derivatives','Statistics','Probability','Matrices','Determinants',
+    'Continuity & Differentiability','Application of Derivatives','Integrals','Application of Integrals',
+    'Differential Equations','Vectors','Three Dimensional Geometry','Linear Programming'
+  ]},
+  { key:'physics', label:'Physics', accent:'var(--teal)', defaults:[
+    'Physical World & Units','Kinematics','Laws of Motion','Work, Energy & Power','Rotational Motion',
+    'Gravitation','Mechanical Properties of Solids','Mechanical Properties of Fluids','Thermal Properties of Matter',
+    'Thermodynamics','Kinetic Theory of Gases','Oscillations','Waves','Electric Charges & Fields',
+    'Electrostatic Potential & Capacitance','Current Electricity','Moving Charges & Magnetism',
+    'Magnetism & Matter','Electromagnetic Induction','Alternating Current','Electromagnetic Waves',
+    'Ray Optics','Wave Optics','Dual Nature of Radiation & Matter','Atoms','Nuclei','Semiconductor Electronics'
+  ]},
+  { key:'chemistry', label:'Chemistry', accent:'var(--wine)', defaults:[
+    'Basic Concepts of Chemistry','Structure of Atom','Classification & Periodicity','Chemical Bonding',
+    'States of Matter','Thermodynamics','Equilibrium','Redox Reactions','Hydrogen','s-Block Elements',
+    'p-Block Elements (13 & 14)','Organic Chemistry — Basics','Hydrocarbons','Environmental Chemistry',
+    'Solid State','Solutions','Electrochemistry','Chemical Kinetics','Surface Chemistry',
+    'p-Block Elements (15–18)','d & f Block Elements','Coordination Compounds','Haloalkanes & Haloarenes',
+    'Alcohols, Phenols & Ethers','Aldehydes, Ketones & Carboxylic Acids','Amines','Biomolecules',
+    'Polymers','Chemistry in Everyday Life'
+  ]}
+];
+const DOW = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+let state = null;
+let currentPage = 'today';
+let activeSubject = 'maths';
+
+function defaultState(){
+  const chapters = {};
+  SUBJECTS.forEach(s => { chapters[s.key] = s.defaults.map((name,i)=>({id:s.key+'-'+i, name, done:false})); });
+  return { dailyTarget: 2, examDate: '', backlogCount: 0, days: {}, tests: [], chapters };
+}
+
+async function loadState(){
+  try{
+    const raw = localStorage.getItem('tracker-data-v2');
+    state = raw ? JSON.parse(raw) : defaultState();
+  }catch(e){ state = defaultState(); }
+  if(!state.chapters) state.chapters = defaultState().chapters;
+  if(!state.days) state.days = {};
+  if(!state.tests) state.tests = [];
+  if(typeof state.backlogCount !== 'number') state.backlogCount = 0;
+  render();
+}
+async function save(){
+  try{ localStorage.setItem('tracker-data-v2', JSON.stringify(state)); }
+  catch(e){ console.error('save failed', e); }
+}
+
+function isoDate(d){
+  const y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+  return `${y}-${m}-${day}`;
+}
+function isRestDay(d){ return d.getDay() === 0; }
+
+function ensureDay(dateKey, dateObj){
+  const restDay = isRestDay(dateObj);
+  let arr = state.days[dateKey];
+  if(!arr){
+    arr = Array.from({length: restDay ? 0 : state.dailyTarget}, () => ({status:'pending'}));
+    state.days[dateKey] = arr;
+    return arr;
+  }
+  if(restDay) return arr;
+  const target = state.dailyTarget;
+  const lockedCount = arr.filter(l => l.status !== 'pending').length;
+  const desired = Math.max(target, lockedCount);
+  if(arr.length < desired){
+    while(arr.length < desired) arr.push({status:'pending'});
+  } else if(arr.length > desired){
+    for(let i = arr.length-1; i >= 0 && arr.length > desired; i--){
+      if(arr[i].status === 'pending') arr.splice(i,1);
+    }
+  }
+  return arr;
+}
+
+function setLectureStatus(dateKey, idx, newStatus){
+  const arr = state.days[dateKey];
+  const lec = arr[idx];
+  if(lec.status === 'skipped' && newStatus !== 'skipped') state.backlogCount = Math.max(0, state.backlogCount-1);
+  if(newStatus === 'skipped' && lec.status !== 'skipped') state.backlogCount += 1;
+  lec.status = newStatus;
+  save();
+}
+
+function startOfWeek(d){
+  const copy = new Date(d);
+  copy.setDate(copy.getDate() - copy.getDay());
+  copy.setHours(0,0,0,0);
+  return copy;
+}
+
+function daysUntil(dateStr){
+  if(!dateStr) return null;
+  const target = new Date(dateStr+'T00:00:00');
+  const now = new Date(); now.setHours(0,0,0,0);
+  return Math.round((target-now)/(1000*60*60*24));
+}
+
+function weekStats(){
+  const today = new Date();
+  const sow = startOfWeek(today);
+  let done=0, total=0;
+  for(let i=0;i<7;i++){
+    const d = new Date(sow); d.setDate(sow.getDate()+i);
+    const key = isoDate(d);
+    const arr = ensureDay(key, d);
+    total += arr.length;
+    done += arr.filter(l=>l.status==='done').length;
+  }
+  return {done, total};
+}
+
+function subjectProgress(key){
+  const list = state.chapters[key];
+  if(!list.length) return 0;
+  return Math.round((list.filter(c=>c.done).length/list.length)*100);
+}
+function overallProgress(){
+  let done=0, total=0;
+  SUBJECTS.forEach(s=>{ const l=state.chapters[s.key]; total+=l.length; done+=l.filter(c=>c.done).length; });
+  return total ? Math.round((done/total)*100) : 0;
+}
+function escapeHtml(str){ const d=document.createElement('div'); d.textContent=str; return d.innerHTML; }
+
+function renderStatsRow(){
+  const todayKey = isoDate(new Date());
+  const todayArr = ensureDay(todayKey, new Date());
+  const todayDone = todayArr.filter(l=>l.status==='done').length;
+  const wk = weekStats();
+  const pendingTests = state.tests.filter(t=>!t.done).length;
+  const isRest = todayArr.length === 0;
+
+  return `
+    <div class="stats">
+      <div class="card">
+        <div class="card-label">Today</div>
+        <div class="card-value">${isRest ? '0/0' : todayDone+'/'+todayArr.length}</div>
+        <div class="card-sub">${isRest ? 'rest day' : 'lectures done'}</div>
+      </div>
+      <div class="card accent-brass">
+        <div class="card-label">Backlog</div>
+        <div class="card-value">${state.backlogCount}</div>
+        <div class="card-sub">lectures pending</div>
+      </div>
+      <div class="card accent-wine">
+        <div class="card-label">Tests</div>
+        <div class="card-value">${pendingTests}</div>
+        <div class="card-sub">pending</div>
+      </div>
+      <div class="card accent-teal">
+        <div class="card-label">This Week</div>
+        <div class="card-value">${wk.done}/${wk.total}</div>
+        <div class="card-sub">lectures done</div>
+      </div>
+    </div>
+  `;
+}
+
+function pageHeader(title){
+  const dateStr = new Date().toLocaleDateString('en-US',{weekday:'long', year:'numeric', month:'long', day:'numeric'});
+  return `<div class="page-title">${title}</div><div class="page-date">${dateStr}</div>`;
+}
+
+function renderToday(){
+  const todayKey = isoDate(new Date());
+  const arr = ensureDay(todayKey, new Date());
+  let body;
+  if(arr.length === 0){
+    body = `<div class="rest-day">Sunday — no lectures scheduled today.</div>`;
+  } else {
+    body = arr.map((lec, idx) => `
+      <div class="lecture-card status-${lec.status}">
+        <div class="l-name">Lecture ${idx+1}</div>
+        <button class="skip-link ${lec.status==='skipped'?'active':''}" data-idx="${idx}" data-action="skip">
+          ${lec.status==='skipped' ? 'Skipped' : 'Skip'}
+        </button>
+        <div class="pill ${lec.status==='done'?'done':'pending'}" data-idx="${idx}" data-action="toggle">
+          ${lec.status==='done' ? '✓ Done' : 'Mark Done'}
+        </div>
+      </div>
+    `).join('');
+  }
+  return `
+    ${pageHeader('Today')}
+    ${renderStatsRow()}
+    <h2 class="section-heading">Today's Lectures</h2>
+    ${body}
+    <div class="mk-signature"><div class="mk-mark"><span>M</span><span>K</span></div></div>
+  `;
+}
+
+function renderWeek(){
+  const today = new Date();
+  const sow = startOfWeek(today);
+  const todayKey = isoDate(today);
+  let rows = '';
+  for(let i=0;i<7;i++){
+    const d = new Date(sow); d.setDate(sow.getDate()+i);
+    const key = isoDate(d);
+    const arr = ensureDay(key, d);
+    const isToday = key === todayKey;
+    let pillsHtml;
+    if(arr.length === 0){
+      pillsHtml = `<span class="rest-label">Sunday — no lectures</span>`;
+    } else {
+      pillsHtml = `<div class="lec-pills">` + arr.map((lec, idx) => `
+        <button class="mini-pill ${lec.status}" data-day="${key}" data-idx="${idx}">
+          Lec ${idx+1}: ${lec.status === 'done' ? 'Done' : lec.status === 'skipped' ? 'Skipped' : 'Pending'}
+        </button>
+      `).join('') + `</div>`;
+    }
+    const done = arr.filter(l=>l.status==='done').length;
+    rows += `
+      <div class="week-row ${isToday?'is-today':''}">
+        <div class="day-badge"><div class="dow">${DOW[d.getDay()]}</div><div class="dom">${d.getDate()}</div></div>
+        ${pillsHtml}
+        <div class="week-progress">${arr.length ? done+'/'+arr.length : '—'}</div>
+      </div>
+    `;
+  }
+  return `
+    ${pageHeader('This Week')}
+    ${renderStatsRow()}
+    <h2 class="section-heading">Weekly Overview</h2>
+    <div class="week-table">${rows}</div>
+    <div class="target-inline">
+      Daily lecture goal (Mon–Sat): <input type="number" min="0" id="targetInput" value="${state.dailyTarget}">
+    </div>
+  `;
+}
+
+function renderBacklog(){
+  return `
+    ${pageHeader('Backlog')}
+    ${renderStatsRow()}
+    <div class="backlog-hero">
+      <div class="big">${state.backlogCount}</div>
+      <div class="cap">Lectures Pending</div>
+      <div class="backlog-controls">
+        <button id="backlogMinus">−</button>
+        <button id="backlogPlus">+</button>
+      </div>
+      <div class="backlog-set">
+        <label for="backlogSetInput">Set exact number:</label>
+        <input type="number" min="0" id="backlogSetInput" value="${state.backlogCount}">
+      </div>
+    </div>
+    <div class="note-box">
+      This adds up automatically: whenever you mark a lecture as <strong>Skipped</strong> on Today or This Week, it adds +1 here. Marking it Done or Pending again removes it. You can also nudge the count manually with the buttons above.
+    </div>
+  `;
+}
+
+function renderTests(){
+  const total = state.tests.length;
+  const done = state.tests.filter(t=>t.done).length;
+  const pending = total - done;
+  return `
+    ${pageHeader('Tests')}
+    ${renderStatsRow()}
+    <h2 class="section-heading">Pending Tests</h2>
+    ${state.tests.map(t => `
+      <div class="test-item ${t.done?'done':''}">
+        <input type="checkbox" data-id="${t.id}" ${t.done?'checked':''}>
+        <div class="t-info">
+          <div class="t-name">${escapeHtml(t.name)}</div>
+          <div class="t-status ${t.done?'done':'pending'}">${t.done?'Completed':'Pending'}</div>
+        </div>
+        <button class="t-remove" data-id="${t.id}">✕</button>
+      </div>
+    `).join('') || `<div class="note-box">No tests added yet.</div>`}
+    <div class="add-row">
+      <input type="text" id="newTestInput" placeholder="Enter test name…">
+      <button id="addTestBtn">+ Add</button>
+    </div>
+    <h2 class="section-heading">Statistics</h2>
+    <div class="test-stats">
+      <div class="card"><div class="card-label">Total</div><div class="card-value">${total}</div></div>
+      <div class="card accent-teal"><div class="card-label">Completed</div><div class="card-value">${done}</div></div>
+      <div class="card accent-wine"><div class="card-label">Pending</div><div class="card-value">${pending}</div></div>
+    </div>
+  `;
+}
+
+function renderChapters(){
+  return `
+    ${pageHeader('Chapters')}
+    ${renderStatsRow()}
+    <div style="margin-bottom:22px;">
+      <div class="card-sub" style="margin-bottom:8px;">Overall syllabus: ${overallProgress()}%</div>
+      <div class="progress-track"><div class="progress-fill" style="width:${overallProgress()}%"></div></div>
+    </div>
+    <div class="subject-tabs">
+      ${SUBJECTS.map(s => `
+        <button class="subject-tab ${activeSubject===s.key?'active':''}" data-subject="${s.key}">
+          <div class="s-name">${s.label}</div>
+          <div class="s-progress">${subjectProgress(s.key)}% complete</div>
+        </button>
+      `).join('')}
+    </div>
+    <div class="chapter-panel" style="--current-accent: ${SUBJECTS.find(s=>s.key===activeSubject).accent}">
+      <ul class="chapter-list">
+        ${state.chapters[activeSubject].map(c => `
+          <li class="chapter-item ${c.done?'done':''}">
+            <input type="checkbox" data-id="${c.id}" ${c.done?'checked':''}>
+            <span class="c-name">${escapeHtml(c.name)}</span>
+            <button class="c-remove" data-id="${c.id}">✕</button>
+          </li>
+        `).join('')}
+      </ul>
+      <div class="add-chapter">
+        <input type="text" id="newChapterInput" placeholder="Add a chapter…">
+        <button id="addChapterBtn">Add</button>
+      </div>
+    </div>
+  `;
+}
+
+function render(){
+  const days = daysUntil(state.examDate);
+  const pages = { today: renderToday, week: renderWeek, backlog: renderBacklog, tests: renderTests, chapters: renderChapters };
+  const app = document.getElementById('app');
+  app.innerHTML = `
+    <div class="sidebar">
+      <div class="eyebrow">Study OS</div>
+      <div class="app-title">Study Tracker</div>
+      <div class="app-date">${new Date().toLocaleDateString('en-US',{day:'numeric', month:'short', year:'numeric'})}</div>
+
+      <div class="exam-chip" id="examChip">
+        ${ state.examDate ? `
+          <div class="num">${days>=0?days:0}</div>
+          <div class="lbl">${days===1?'day to exam':days===0?'exam today':'days to exam'}</div>
+        ` : `<div class="lbl">Set exam date</div>` }
+        <input type="date" id="examDateInput" value="${state.examDate||''}">
+      </div>
+
+      <nav>
+        <button class="nav-item ${currentPage==='today'?'active':''}" data-page="today"><span class="ico">◆</span>Today</button>
+        <button class="nav-item ${currentPage==='week'?'active':''}" data-page="week"><span class="ico">▦</span>This Week</button>
+        <button class="nav-item ${currentPage==='backlog'?'active':''}" data-page="backlog"><span class="ico">◧</span>Backlog</button>
+        <button class="nav-item ${currentPage==='tests'?'active':''}" data-page="tests"><span class="ico">✎</span>Tests</button>
+        <button class="nav-item ${currentPage==='chapters'?'active':''}" data-page="chapters"><span class="ico">▤</span>Chapters</button>
+      </nav>
+
+      <div class="save-indicator"><span class="save-dot"></span>All changes saved</div>
+      <button class="reset-link" id="resetBtn">Reset all data</button>
+    </div>
+    <main>${pages[currentPage]()}</main>
+  `;
+  attachHandlers();
+}
+
+function attachHandlers(){
+  document.querySelectorAll('.nav-item').forEach(btn => {
+    btn.onclick = () => { currentPage = btn.dataset.page; render(); };
+  });
+  document.getElementById('examDateInput').onchange = (e) => { state.examDate = e.target.value; save(); render(); };
+  document.getElementById('resetBtn').onclick = () => {
+    if(confirm('Reset all tracker data? This cannot be undone.')){ state = defaultState(); save(); render(); }
+  };
+
+  if(currentPage === 'today'){
+    document.querySelectorAll('[data-action="toggle"]').forEach(el => {
+      el.onclick = () => {
+        const key = isoDate(new Date());
+        const idx = parseInt(el.dataset.idx,10);
+        const lec = state.days[key][idx];
+        setLectureStatus(key, idx, lec.status === 'done' ? 'pending' : 'done');
+        render();
+      };
+    });
+    document.querySelectorAll('[data-action="skip"]').forEach(el => {
+      el.onclick = () => {
+        const key = isoDate(new Date());
+        const idx = parseInt(el.dataset.idx,10);
+        const lec = state.days[key][idx];
+        setLectureStatus(key, idx, lec.status === 'skipped' ? 'pending' : 'skipped');
+        render();
+      };
+    });
+  }
+
+  if(currentPage === 'week'){
+    document.querySelectorAll('.mini-pill').forEach(el => {
+      el.onclick = () => {
+        const key = el.dataset.day;
+        const idx = parseInt(el.dataset.idx,10);
+        const lec = state.days[key][idx];
+        const order = ['pending','done','skipped'];
+        const next = order[(order.indexOf(lec.status)+1) % order.length];
+        setLectureStatus(key, idx, next);
+        render();
+      };
+    });
+    const t = document.getElementById('targetInput');
+    if(t) t.onchange = (e) => {
+      const v = parseInt(e.target.value,10);
+      state.dailyTarget = isNaN(v)||v<0 ? 0 : v;
+      const sow = startOfWeek(new Date());
+      for(let i=0;i<7;i++){ const d = new Date(sow); d.setDate(sow.getDate()+i); ensureDay(isoDate(d), d); }
+      save(); render();
+    };
+  }
+
+  if(currentPage === 'backlog'){
+    document.getElementById('backlogMinus').onclick = () => { state.backlogCount = Math.max(0,state.backlogCount-1); save(); render(); };
+    document.getElementById('backlogPlus').onclick = () => { state.backlogCount += 1; save(); render(); };
+    document.getElementById('backlogSetInput').onchange = (e) => {
+      const v = parseInt(e.target.value,10);
+      state.backlogCount = isNaN(v)||v<0 ? 0 : v;
+      save(); render();
+    };
+  }
+
+  if(currentPage === 'tests'){
+    document.querySelectorAll('.test-item input[type="checkbox"]').forEach(cb => {
+      cb.onchange = () => {
+        const t = state.tests.find(t=>t.id===cb.dataset.id);
+        if(t){ t.done = cb.checked; save(); render(); }
+      };
+    });
+    document.querySelectorAll('.t-remove').forEach(btn => {
+      btn.onclick = () => { state.tests = state.tests.filter(t=>t.id!==btn.dataset.id); save(); render(); };
+    });
+    const addBtn = document.getElementById('addTestBtn');
+    const addInput = document.getElementById('newTestInput');
+    const addTest = () => {
+      const name = addInput.value.trim();
+      if(!name) return;
+      state.tests.push({ id: 'test-'+Date.now(), name, done:false });
+      save(); render();
+    };
+    addBtn.onclick = addTest;
+    addInput.onkeydown = (e) => { if(e.key==='Enter') addTest(); };
+  }
+
+  if(currentPage === 'chapters'){
+    document.querySelectorAll('.subject-tab').forEach(btn => {
+      btn.onclick = () => { activeSubject = btn.dataset.subject; render(); };
+    });
+    document.querySelectorAll('.chapter-item input[type="checkbox"]').forEach(cb => {
+      cb.onchange = () => {
+        const item = state.chapters[activeSubject].find(c=>c.id===cb.dataset.id);
+        if(item){ item.done = cb.checked; save(); render(); }
+      };
+    });
+    document.querySelectorAll('.c-remove').forEach(btn => {
+      btn.onclick = () => {
+        state.chapters[activeSubject] = state.chapters[activeSubject].filter(c=>c.id!==btn.dataset.id);
+        save(); render();
+      };
+    });
+    const addBtn = document.getElementById('addChapterBtn');
+    const addInput = document.getElementById('newChapterInput');
+    const addChapter = () => {
+      const name = addInput.value.trim();
+      if(!name) return;
+      state.chapters[activeSubject].push({ id: activeSubject+'-'+Date.now(), name, done:false });
+      save(); render();
+    };
+    addBtn.onclick = addChapter;
+    addInput.onkeydown = (e) => { if(e.key==='Enter') addChapter(); };
+  }
+}
+
+loadState();
+</script>
+</body>
+</html>
